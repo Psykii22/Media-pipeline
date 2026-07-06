@@ -2,6 +2,7 @@ package ffmpeg
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 )
@@ -11,14 +12,24 @@ type VideoTask struct {
 	InputURL  string `json:"input_url"`
 	OutputKey string `json:"output_key"`
 }
-type Processor struct{}
 
-func NewProcessor() *Processor {
-	return &Processor{}
+type Processor struct {
+	OutputDir string
 }
+
+func NewProcessor(outputDir string) *Processor {
+	return &Processor{OutputDir: outputDir}
+}
+
 func (p *Processor) ProcessVideo(ctx context.Context, task VideoTask) ([]byte, error) {
-	playlist := filepath.Join(task.OutputKey, "playlist.m3u8")
-	segments := filepath.Join(task.OutputKey, "segment_%03d.ts")
+	outputPath := filepath.Join(p.OutputDir, task.OutputKey)
+
+	if err := os.MkdirAll(outputPath, 0755); err != nil {
+		return nil, err
+	}
+
+	playlist := filepath.Join(outputPath, "playlist.m3u8")
+	segments := filepath.Join(outputPath, "segment_%03d.ts")
 	cmd := exec.CommandContext(ctx, "ffmpeg",
 		"-y",
 		"-i", task.InputURL,
