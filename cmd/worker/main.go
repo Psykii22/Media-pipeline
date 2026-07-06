@@ -26,15 +26,17 @@ func main() {
 	defer stop()
 
 	// Initialize components
-	proc := ffmpeg.NewProcessor()
-	successProd := queue.NewProducer(cfg.BrokerAddress, cfg.TopicSuccess)
-	errorProd := queue.NewProducer(cfg.BrokerAddress, cfg.TopicError)
-	consumer := queue.NewConsumer(cfg.BrokerAddress, cfg.TopicIngest, cfg.ConsumerGroup)
+	proc := ffmpeg.NewProcessor(cfg.OutputDir)
+	successProd := queue.NewProducer(cfg.Brokers, cfg.TopicSuccess)
+	errorProd := queue.NewProducer(cfg.Brokers, cfg.TopicError)
+	consumer := queue.NewConsumer(cfg.Brokers, cfg.TopicIngest, cfg.ConsumerGroup)
 
 	defer successProd.Close()
 	defer errorProd.Close()
 
-	go testSeedKafkaQueue(ctx, cfg.BrokerAddress, cfg.TopicIngest)
+	if os.Getenv("DEV_MODE") == "true" {
+		go testSeedKafkaQueue(ctx, cfg.Brokers, cfg.TopicIngest)
+	}
 
 	jobsChan := make(chan kafka.Message, 10)
 	var wg sync.WaitGroup
@@ -85,11 +87,11 @@ func runWorker(ctx context.Context, id int, jobs <-chan kafka.Message, proc *ffm
 	}
 }
 
-func testSeedKafkaQueue(ctx context.Context, broker, topic string) {
+func testSeedKafkaQueue(ctx context.Context, brokers []string, topic string) {
 	time.Sleep(3 * time.Second)
 
 	writer := &kafka.Writer{
-		Addr:                   kafka.TCP(broker),
+		Addr:                   kafka.TCP(brokers...),
 		Topic:                  topic,
 		Balancer:               &kafka.LeastBytes{},
 		AllowAutoTopicCreation: true,
@@ -101,7 +103,7 @@ func testSeedKafkaQueue(ctx context.Context, broker, topic string) {
 	task := ffmpeg.VideoTask{
 		ID:        fmt.Sprintf("vid-%d", 1),
 		InputURL:  "input.mp4",
-		OutputKey: "./output",
+		OutputKey: "vid-1",
 	}
 
 	body, err := json.Marshal(task)
