@@ -88,12 +88,3 @@ docker compose up -d promtail
 ```
 
 Query in Grafana: `{app="media-pipeline"}`
-
-## Roadmap
-
-- [ ] Strimzi Kafka operator on K8s
-- [ ] Multiple quality profiles (720p, 1080p)
-- [ ] S3/MinIO storage backend
-- [ ] Idempotent producers / exactly-once semantics
-- [ ] Prometheus metrics
-- [ ] Graceful shutdown with draining
